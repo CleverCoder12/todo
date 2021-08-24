@@ -1,20 +1,39 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./App.css";
+import db from "./firebase";
+import firebase from "firebase";
 
 function App() {
-  const [todo, setTodo] = useState(["country", "state", "parish"]);
+  const [todo, setTodo] = useState([]);
   const [input, setInput] = useState(" ");
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    if (input.length === 1) {
+    if (input.length === 0) {
       return null;
     } else {
-      setTodo([...todo, input]);
-      setInput(" ");
+      db.collection("todo").add({
+        todo: input,
+
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      setInput("");
     }
   };
+
+  useEffect(() => {
+    db.collection("todo")
+      .orderBy("timestamp", "desc")
+      .onSnapshot((snapshot) => {
+        setTodo(
+          snapshot.docs.map((item) => ({
+            Id: item.id,
+            Todos: item.data().todo,
+          }))
+        );
+      });
+  }, [input]);
+
   return (
     <div className="App">
       <h1>Todo list</h1>
@@ -32,8 +51,19 @@ function App() {
           </button>
         </form>
       </div>
-      {todo.map((item) => (
-        <li className="list">{item}</li>
+
+      {todo.map(({ Id, Todos }) => (
+        <div className="list ">
+          <li className="unit">{Todos}</li>
+          <div className="end">
+            <button
+              className="button"
+              onClick={() => db.collection("todo").doc(Id).delete()}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
       ))}
     </div>
   );
